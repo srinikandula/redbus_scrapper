@@ -1,12 +1,12 @@
 # RedBus Fare Scraper for Dynamic Pricing
 
-A Python project to scrape bus ticket fares from RedBus for building a dynamic pricing module. The scraper searches buses between source and destination combinations, navigates to search results, extracts seat/fare information, and builds a database for fare analysis and dynamic pricing strategies.
+A Python project to scrape bus ticket fares from RedBus for building a dynamic pricing module. The scraper searches buses between source and destination combinations, navigates to search results, extracts seat/fare information, and builds a MongoDB database for fare analysis and dynamic pricing strategies.
 
 ## Features
 
 - **Automated Bus Search**: Search buses between any source-destination combination
 - **Detailed Fare Extraction**: Extract seat categories, prices, and availability
-- **Database Storage**: Store fare data in SQLite database with proper schema
+- **MongoDB Storage**: Store fare data in MongoDB database with proper collections and indexing
 - **Analytics & Insights**: Analyze price trends and demand patterns
 - **Export Functionality**: Export data to CSV for further analysis
 - **Multiple Route Support**: Process multiple routes from configuration
@@ -25,10 +25,11 @@ redbus_scrapper/
 │       └── database_models.py     # Database schema and models
 ├── config/
 │   └── routes.json                # Route configurations
-├── data/                          # Database and export files
+├── data/                          # Export files
 ├── logs/                          # Log files
 ├── main.py                        # Main application entry point
 ├── requirements.txt               # Python dependencies
+├── CLAUDE.md                       # MongoDB setup and configuration guide
 └── README.md                      # This file
 ```
 
@@ -46,17 +47,28 @@ redbus_scrapper/
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies**:
+3. **Install MongoDB**:
+   ```bash
+   # On macOS
+   brew install mongodb-community
+   brew services start mongodb-community
+
+   # On Ubuntu
+   sudo apt-get install mongodb
+   sudo systemctl start mongodb
+   ```
+
+4. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Install Playwright browsers**:
+5. **Install Playwright browsers**:
    ```bash
    playwright install chromium
    ```
 
-5. **Create necessary directories**:
+6. **Create necessary directories**:
    ```bash
    mkdir -p data logs
    ```
@@ -125,18 +137,86 @@ Copy `.env.example` to `.env` and modify settings:
 ```env
 HEADLESS_MODE=true
 DELAY_BETWEEN_REQUESTS=2
-DATABASE_PATH=data/redbus_fares.db
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DATABASE=redbus_fares
 ```
 
 ## Database Schema
 
-The project uses SQLite with the following main tables:
+The project uses **MongoDB** with the following main collections:
 
-- **routes**: Source-destination combinations
-- **bus_operators**: Bus company information
-- **bus_services**: Bus service details (timings, type, etc.)
-- **fare_data**: Seat categories, prices, and availability
-- **scraping_sessions**: Track scraping operations
+### Collections Structure
+
+#### routes
+```json
+{
+  "_id": "ObjectId",
+  "source": "String",
+  "destination": "String",
+  "distance_km": "Number (optional)",
+  "created_at": "Date"
+}
+```
+
+#### bus_operators
+```json
+{
+  "_id": "ObjectId",
+  "name": "String (unique)",
+  "rating": "Number (optional)",
+  "created_at": "Date"
+}
+```
+
+#### bus_services
+```json
+{
+  "_id": "ObjectId",
+  "route_id": "ObjectId",
+  "operator_id": "ObjectId",
+  "bus_type": "String",
+  "departure_time": "String",
+  "arrival_time": "String",
+  "duration": "String",
+  "rating": "Number (optional)",
+  "created_at": "Date"
+}
+```
+
+#### fare_data
+```json
+{
+  "_id": "ObjectId",
+  "service_id": "ObjectId",
+  "journey_date": "String",
+  "seat_category": "String",
+  "fare": "Number",
+  "available_seats": "Number",
+  "starting_price": "Number (optional)",
+  "scraped_at": "Date",
+  "demand_factor": "Number (optional)"
+}
+```
+
+#### scraping_sessions
+```json
+{
+  "_id": "ObjectId",
+  "route_id": "ObjectId",
+  "journey_date": "String",
+  "total_buses_found": "Number",
+  "successful_scrapes": "Number",
+  "session_start": "Date",
+  "session_end": "Date (optional)",
+  "status": "String"
+}
+```
+
+### MongoDB Features
+- **Proper indexing** on frequently queried fields
+- **Aggregation pipelines** for complex analytics
+- **Upsert operations** for routes and operators
+- **Flexible schema** for evolving requirements
 
 ## Analytics & Insights
 
@@ -174,14 +254,41 @@ The scraped data can be used for:
    playwright install chromium
    ```
 
-2. **No data scraped**: Website structure may have changed
+2. **MongoDB connection failed**: Ensure MongoDB is running
+   ```bash
+   # Check if MongoDB is running
+   brew services list | grep mongodb
+   
+   # Start MongoDB if not running
+   brew services start mongodb-community
+   ```
+
+3. **No data scraped**: Website structure may have changed
    - Check logs for specific errors
    - Update selectors in scraper code
 
-3. **Database errors**: Ensure data directory exists
+4. **Database connection errors**: Verify MongoDB configuration
    ```bash
-   mkdir -p data
+   # Test MongoDB connection
+   python -c "from src.models.database_models import DatabaseManager; db = DatabaseManager(); print('MongoDB connection successful')"
    ```
+
+5. **Missing dependencies**: Install MongoDB drivers
+   ```bash
+   pip install pymongo motor
+   ```
+
+## MongoDB Management
+
+### Database Administration
+- Use **MongoDB Compass** for GUI database management
+- Monitor logs: `tail -f /usr/local/var/log/mongodb/mongo.log`
+- View database stats in MongoDB shell: `mongo redbus_fares`
+
+### Performance Tips
+- Collections are pre-indexed for optimal query performance
+- Use aggregation pipelines for complex analytics
+- Consider sharding for large datasets
 
 ## Legal & Ethical Considerations
 
@@ -191,13 +298,18 @@ The scraped data can be used for:
 - Do not overload the target server
 - Use scraped data responsibly
 
+## Documentation
+
+For detailed MongoDB setup, configuration, and usage instructions, see **[CLAUDE.md](CLAUDE.md)**.
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+4. Test MongoDB integration
+5. Add tests if applicable
+6. Submit a pull request
 
 ## License
 
