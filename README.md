@@ -28,7 +28,8 @@ redbus_scrapper/
 ├── data/                          # Export files
 ├── logs/                          # Log files
 ├── main.py                        # Main application entry point
-├── requirements.txt               # Python dependencies
+├── requirements.txt               # Python dependencies (legacy)
+├── pyproject.toml                 # Modern Python project configuration
 ├── CLAUDE.md                       # MongoDB setup and configuration guide
 └── README.md                      # This file
 ```
@@ -41,13 +42,22 @@ redbus_scrapper/
    cd redbus_scrapper
    ```
 
-2. **Create virtual environment**:
+2. **Install uv (if not already installed)**:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   # On macOS/Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   
+   # Or using pip
+   pip install uv
    ```
 
-3. **Install MongoDB**:
+3. **Create virtual environment with uv**:
+   ```bash
+   uv venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+4. **Install MongoDB**:
    ```bash
    # On macOS
    brew install mongodb-community
@@ -58,17 +68,24 @@ redbus_scrapper/
    sudo systemctl start mongodb
    ```
 
-4. **Install dependencies**:
+5. **Install dependencies with uv**:
    ```bash
-   pip install -r requirements.txt
+   # Option 1: Install from requirements.txt
+   uv pip install -r requirements.txt
+   
+   # Option 2: Install using pyproject.toml (recommended)
+   uv pip install -e .
+   
+   # Option 3: Install with development dependencies
+   uv pip install -e ".[dev]"
    ```
 
-5. **Install Playwright browsers**:
+6. **Install Playwright browsers**:
    ```bash
    playwright install chromium
    ```
 
-6. **Create necessary directories**:
+7. **Create necessary directories**:
    ```bash
    mkdir -p data logs
    ```
@@ -275,7 +292,7 @@ The scraped data can be used for:
 
 5. **Missing dependencies**: Install MongoDB drivers
    ```bash
-   pip install pymongo motor
+   uv pip install pymongo motor
    ```
 
 ## MongoDB Management
@@ -289,6 +306,36 @@ The scraped data can be used for:
 - Collections are pre-indexed for optimal query performance
 - Use aggregation pipelines for complex analytics
 - Consider sharding for large datasets
+
+### Package Management with uv
+- **Fast**: uv is significantly faster than pip
+- **Reliable**: Better dependency resolution  
+- **Compatible**: Drop-in replacement for pip commands
+- **Modern**: Uses pyproject.toml for configuration
+
+#### Common uv Commands
+```bash
+# Install project in editable mode
+uv pip install -e .
+
+# Install with development dependencies
+uv pip install -e ".[dev]"
+
+# Add a new package
+uv add package_name
+
+# Remove packages
+uv remove package_name
+
+# Sync dependencies
+uv pip sync requirements.txt
+
+# Run development tools
+uv run black src/          # Code formatting
+uv run flake8 src/         # Linting
+uv run mypy src/           # Type checking
+uv run pytest             # Testing
+```
 
 ## Legal & Ethical Considerations
 

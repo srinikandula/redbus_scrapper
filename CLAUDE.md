@@ -92,9 +92,19 @@ sudo apt-get install mongodb
 sudo systemctl start mongodb
 ```
 
-### 2. Install Python Dependencies
+### 2. Install uv and Python Dependencies
 ```bash
-pip install -r requirements.txt
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies (choose one method)
+uv pip install -r requirements.txt      # Legacy method
+uv pip install -e .                     # Modern method using pyproject.toml
+uv pip install -e ".[dev]"              # With development dependencies
 ```
 
 ### 3. Run the Application
@@ -152,6 +162,9 @@ You can set these environment variables:
 # Test MongoDB connection
 python -c "from src.models.database_models import DatabaseManager; db = DatabaseManager(); print('MongoDB connection successful')"
 
+# Install development dependencies with uv
+uv pip install flake8 mypy
+
 # Run linting (if available)
 python -m flake8 src/
 
@@ -183,8 +196,41 @@ redbus_scrapper/
 └── CLAUDE.md                        # This documentation
 ```
 
+## Package Management
+
+This project uses **uv** for fast and reliable Python package management:
+
+### Benefits of uv
+- **10-100x faster** than pip
+- **Better dependency resolution**
+- **Drop-in replacement** for pip commands
+- **Lockfile support** for reproducible builds
+
+### Common uv Commands
+```bash
+# Install project dependencies
+uv pip install -e .                     # Install project in editable mode
+uv pip install -e ".[dev]"              # Install with development dependencies
+uv pip install -r requirements.txt      # Install from requirements.txt
+
+# Add/remove packages
+uv add package_name                      # Add a new package
+uv remove package_name                   # Remove a package
+
+# Environment management
+uv venv                                  # Create virtual environment
+uv pip sync requirements.txt            # Sync dependencies
+
+# Development tools (if dev dependencies installed)
+uv run black src/                       # Code formatting
+uv run flake8 src/                      # Linting
+uv run mypy src/                        # Type checking
+uv run pytest                           # Run tests
+```
+
 ## Migration Notes
 - Migrated from SQLite to MongoDB
 - Changed from integer IDs to ObjectId
 - Updated all database operations to use MongoDB aggregation pipelines
 - Maintained backward compatibility for data export functionality
+- Updated package management to use uv instead of pip
