@@ -1,0 +1,42 @@
+[
+  {
+    "source": "Hyderabad",
+    "destination": "Bangalore",
+    "journey_date": null
+  },
+  {
+    "source": "Bangalore",
+    "destination": "Chennai", 
+    "journey_date": null
+  },
+  {
+    "source": "Mumbai",
+    "destination": "Pune",
+    "journey_date": null
+  },
+  {
+    "source": "Delhi",
+    "destination": "Agra",
+    "journey_date": null
+  },
+  {
+    "source": "Chennai",
+    "destination": "Coimbatore",
+    "journey_date": null
+  },
+  {
+    "source": "Kolkata",
+    "destination": "Bhubaneswar",
+    "journey_date": null
+  },
+  {
+    "source": "Pune",
+    "destination": "Goa",
+    "journey_date": null
+  },
+  {
+    "source": "Ahmedabad",
+    "destination": "Surat",
+    "journey_date": null
+  }
+]
