@@ -32,7 +32,7 @@ async def scrape_single_route(source: str, destination: str, journey_date: str =
     data_manager = DataManager()
     
     try:
-        logger.info(f"Starting scrape for {source} to {destination}")
+        logger.info(f"Starting scrape for {source} to {destination} for date {journey_date}" )
         
         await scraper.initialize_browser()
         scrape_results = await scraper.scrape_route(source, destination, journey_date)
