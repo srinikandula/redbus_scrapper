@@ -3,11 +3,12 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Optional
 from src.models.database_models import DatabaseManager
+from bson import ObjectId
 import re
 
 class DataManager:
-    def __init__(self, db_path: str = "data/redbus_fares.db"):
-        self.db = DatabaseManager(db_path)
+    def __init__(self, connection_string: str = "mongodb://localhost:27017", db_name: str = "redbus_fares"):
+        self.db = DatabaseManager(connection_string, db_name)
         self.logger = logging.getLogger(__name__)
     
     def process_scraping_results(self, scrape_results: Dict) -> Dict:
@@ -77,7 +78,7 @@ class DataManager:
             pass
         return None
     
-    def _store_bus_data(self, bus_data: Dict, route_id: int, journey_date: str) -> bool:
+    def _store_bus_data(self, bus_data: Dict, route_id: ObjectId, journey_date: str) -> bool:
         """Store individual bus data in the database"""
         try:
             operator_name = bus_data.get('operator_name', 'Unknown')
@@ -249,19 +250,46 @@ class DataManager:
     def get_all_routes(self) -> List[Dict]:
         """Get all routes in the database"""
         try:
-            with self.db.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT DISTINCT source, destination, COUNT(*) as total_records
-                    FROM routes r
-                    JOIN bus_services bs ON r.id = bs.route_id
-                    JOIN fare_data fd ON bs.id = fd.service_id
-                    GROUP BY source, destination
-                    ORDER BY total_records DESC
-                ''')
-                
-                columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            pipeline = [
+                {
+                    "$lookup": {
+                        "from": "bus_services",
+                        "localField": "_id",
+                        "foreignField": "route_id",
+                        "as": "services"
+                    }
+                },
+                {
+                    "$lookup": {
+                        "from": "fare_data",
+                        "localField": "services._id",
+                        "foreignField": "service_id",
+                        "as": "fares"
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": {
+                            "source": "$source",
+                            "destination": "$destination"
+                        },
+                        "total_records": {"$sum": {"$size": "$fares"}}
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 0,
+                        "source": "$_id.source",
+                        "destination": "$_id.destination",
+                        "total_records": 1
+                    }
+                },
+                {
+                    "$sort": {"total_records": -1}
+                }
+            ]
+            
+            return list(self.db.db.routes.aggregate(pipeline))
                 
         except Exception as e:
             self.logger.error(f"Error getting all routes: {str(e)}")

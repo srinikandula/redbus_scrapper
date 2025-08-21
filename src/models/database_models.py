@@ -1,323 +1,422 @@
-import sqlite3
 import json
+import asyncio
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
+from bson import ObjectId
+from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 
 @dataclass
 class Route:
-    id: Optional[int]
+    _id: Optional[ObjectId]
     source: str
     destination: str
     distance_km: Optional[float] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 @dataclass
 class BusOperator:
-    id: Optional[int]
+    _id: Optional[ObjectId]
     name: str
     rating: Optional[float] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 @dataclass
 class BusService:
-    id: Optional[int]
-    route_id: int
-    operator_id: int
+    _id: Optional[ObjectId]
+    route_id: ObjectId
+    operator_id: ObjectId
     bus_type: str
     departure_time: str
     arrival_time: str
     duration: str
     rating: Optional[float] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 @dataclass
 class FareData:
-    id: Optional[int]
-    service_id: int
+    _id: Optional[ObjectId]
+    service_id: ObjectId
     journey_date: str
     seat_category: str
     fare: float
     available_seats: int
     starting_price: Optional[float] = None
-    scraped_at: str = None
+    scraped_at: Optional[datetime] = None
     demand_factor: Optional[float] = None
 
 @dataclass
 class ScrapingSession:
-    id: Optional[int]
-    route_id: int
+    _id: Optional[ObjectId]
+    route_id: ObjectId
     journey_date: str
     total_buses_found: int
     successful_scrapes: int
-    session_start: str
-    session_end: Optional[str] = None
+    session_start: datetime
+    session_end: Optional[datetime] = None
     status: str = 'active'
 
 class DatabaseManager:
-    def __init__(self, db_path: str = "data/redbus_fares.db"):
-        self.db_path = db_path
+    def __init__(self, connection_string: str = "mongodb://localhost:27017", db_name: str = "redbus_fares"):
+        self.connection_string = connection_string
+        self.db_name = db_name
+        self.client = None
+        self.db = None
         self.init_database()
     
-    def get_connection(self):
-        return sqlite3.connect(self.db_path)
-    
     def init_database(self):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS routes (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    source TEXT NOT NULL,
-                    destination TEXT NOT NULL,
-                    distance_km REAL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(source, destination)
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS bus_operators (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE NOT NULL,
-                    rating REAL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS bus_services (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    route_id INTEGER NOT NULL,
-                    operator_id INTEGER NOT NULL,
-                    bus_type TEXT NOT NULL,
-                    departure_time TEXT NOT NULL,
-                    arrival_time TEXT NOT NULL,
-                    duration TEXT NOT NULL,
-                    rating REAL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (route_id) REFERENCES routes (id),
-                    FOREIGN KEY (operator_id) REFERENCES bus_operators (id)
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS fare_data (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    service_id INTEGER NOT NULL,
-                    journey_date DATE NOT NULL,
-                    seat_category TEXT NOT NULL,
-                    fare REAL NOT NULL,
-                    available_seats INTEGER NOT NULL,
-                    starting_price REAL,
-                    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    demand_factor REAL,
-                    FOREIGN KEY (service_id) REFERENCES bus_services (id)
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS scraping_sessions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    route_id INTEGER NOT NULL,
-                    journey_date DATE NOT NULL,
-                    total_buses_found INTEGER DEFAULT 0,
-                    successful_scrapes INTEGER DEFAULT 0,
-                    session_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    session_end TIMESTAMP,
-                    status TEXT DEFAULT 'active',
-                    FOREIGN KEY (route_id) REFERENCES routes (id)
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_fare_data_date ON fare_data(journey_date);
-            ''')
-            
-            cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_fare_data_service ON fare_data(service_id);
-            ''')
-            
-            cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_routes_source_dest ON routes(source, destination);
-            ''')
-            
-            conn.commit()
+        """Initialize MongoDB connection and create indexes"""
+        self.client = MongoClient(self.connection_string)
+        self.db = self.client[self.db_name]
+        
+        # Create indexes for better performance
+        self.db.routes.create_index([("source", 1), ("destination", 1)], unique=True)
+        self.db.bus_operators.create_index("name", unique=True)
+        self.db.fare_data.create_index("journey_date")
+        self.db.fare_data.create_index("service_id")
+        self.db.scraping_sessions.create_index("route_id")
     
-    def insert_route(self, source: str, destination: str, distance_km: float = None) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT OR IGNORE INTO routes (source, destination, distance_km)
-                VALUES (?, ?, ?)
-            ''', (source, destination, distance_km))
-            
-            cursor.execute('''
-                SELECT id FROM routes WHERE source = ? AND destination = ?
-            ''', (source, destination))
-            
-            return cursor.fetchone()[0]
+    def get_collection(self, collection_name: str):
+        """Get a MongoDB collection"""
+        return self.db[collection_name]
     
-    def insert_operator(self, name: str, rating: float = None) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT OR IGNORE INTO bus_operators (name, rating)
-                VALUES (?, ?)
-            ''', (name, rating))
-            
-            cursor.execute('''
-                SELECT id FROM bus_operators WHERE name = ?
-            ''', (name,))
-            
-            result = cursor.fetchone()
-            return result[0] if result else None
+    def close_connection(self):
+        """Close MongoDB connection"""
+        if self.client:
+            self.client.close()
     
-    def insert_service(self, route_id: int, operator_id: int, bus_type: str,
+    def insert_route(self, source: str, destination: str, distance_km: float = None) -> ObjectId:
+        """Insert or get existing route"""
+        try:
+            route_data = {
+                "source": source,
+                "destination": destination,
+                "distance_km": distance_km,
+                "created_at": datetime.utcnow()
+            }
+            
+            result = self.db.routes.update_one(
+                {"source": source, "destination": destination},
+                {"$setOnInsert": route_data},
+                upsert=True
+            )
+            
+            if result.upserted_id:
+                return result.upserted_id
+            else:
+                existing_route = self.db.routes.find_one({"source": source, "destination": destination})
+                return existing_route["_id"]
+                
+        except Exception as e:
+            print(f"Error inserting route: {e}")
+            return None
+    
+    def insert_operator(self, name: str, rating: float = None) -> ObjectId:
+        """Insert or get existing operator"""
+        try:
+            operator_data = {
+                "name": name,
+                "rating": rating,
+                "created_at": datetime.utcnow()
+            }
+            
+            result = self.db.bus_operators.update_one(
+                {"name": name},
+                {"$setOnInsert": operator_data},
+                upsert=True
+            )
+            
+            if result.upserted_id:
+                return result.upserted_id
+            else:
+                existing_operator = self.db.bus_operators.find_one({"name": name})
+                return existing_operator["_id"]
+                
+        except Exception as e:
+            print(f"Error inserting operator: {e}")
+            return None
+    
+    def insert_service(self, route_id: ObjectId, operator_id: ObjectId, bus_type: str,
                       departure_time: str, arrival_time: str, duration: str,
-                      rating: float = None) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO bus_services 
-                (route_id, operator_id, bus_type, departure_time, arrival_time, duration, rating)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (route_id, operator_id, bus_type, departure_time, arrival_time, duration, rating))
+                      rating: float = None) -> ObjectId:
+        """Insert bus service"""
+        try:
+            service_data = {
+                "route_id": route_id,
+                "operator_id": operator_id,
+                "bus_type": bus_type,
+                "departure_time": departure_time,
+                "arrival_time": arrival_time,
+                "duration": duration,
+                "rating": rating,
+                "created_at": datetime.utcnow()
+            }
             
-            return cursor.lastrowid
-    
-    def insert_fare_data(self, service_id: int, journey_date: str, seat_category: str,
-                        fare: float, available_seats: int, starting_price: float = None) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO fare_data 
-                (service_id, journey_date, seat_category, fare, available_seats, starting_price)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (service_id, journey_date, seat_category, fare, available_seats, starting_price))
+            result = self.db.bus_services.insert_one(service_data)
+            return result.inserted_id
             
-            return cursor.lastrowid
+        except Exception as e:
+            print(f"Error inserting service: {e}")
+            return None
     
-    def start_scraping_session(self, route_id: int, journey_date: str) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO scraping_sessions (route_id, journey_date)
-                VALUES (?, ?)
-            ''', (route_id, journey_date))
+    def insert_fare_data(self, service_id: ObjectId, journey_date: str, seat_category: str,
+                        fare: float, available_seats: int, starting_price: float = None) -> ObjectId:
+        """Insert fare data"""
+        try:
+            fare_data = {
+                "service_id": service_id,
+                "journey_date": journey_date,
+                "seat_category": seat_category,
+                "fare": fare,
+                "available_seats": available_seats,
+                "starting_price": starting_price,
+                "scraped_at": datetime.utcnow()
+            }
             
-            return cursor.lastrowid
+            result = self.db.fare_data.insert_one(fare_data)
+            return result.inserted_id
+            
+        except Exception as e:
+            print(f"Error inserting fare data: {e}")
+            return None
     
-    def update_scraping_session(self, session_id: int, total_buses: int = None,
+    def start_scraping_session(self, route_id: ObjectId, journey_date: str) -> ObjectId:
+        """Start a new scraping session"""
+        try:
+            session_data = {
+                "route_id": route_id,
+                "journey_date": journey_date,
+                "total_buses_found": 0,
+                "successful_scrapes": 0,
+                "session_start": datetime.utcnow(),
+                "status": "active"
+            }
+            
+            result = self.db.scraping_sessions.insert_one(session_data)
+            return result.inserted_id
+            
+        except Exception as e:
+            print(f"Error starting scraping session: {e}")
+            return None
+    
+    def update_scraping_session(self, session_id: ObjectId, total_buses: int = None,
                                successful_scrapes: int = None, status: str = None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            updates = []
-            params = []
+        """Update scraping session"""
+        try:
+            update_data = {}
             
             if total_buses is not None:
-                updates.append("total_buses_found = ?")
-                params.append(total_buses)
+                update_data["total_buses_found"] = total_buses
             
             if successful_scrapes is not None:
-                updates.append("successful_scrapes = ?")
-                params.append(successful_scrapes)
+                update_data["successful_scrapes"] = successful_scrapes
             
             if status is not None:
-                updates.append("status = ?")
-                params.append(status)
+                update_data["status"] = status
                 
                 if status == 'completed':
-                    updates.append("session_end = CURRENT_TIMESTAMP")
+                    update_data["session_end"] = datetime.utcnow()
             
-            if updates:
-                query = f"UPDATE scraping_sessions SET {', '.join(updates)} WHERE id = ?"
-                params.append(session_id)
-                cursor.execute(query, params)
+            if update_data:
+                self.db.scraping_sessions.update_one(
+                    {"_id": session_id},
+                    {"$set": update_data}
+                )
+                
+        except Exception as e:
+            print(f"Error updating scraping session: {e}")
     
     def get_route_fare_history(self, source: str, destination: str, 
                               days_back: int = 30) -> List[Dict]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT 
-                    fd.journey_date,
-                    bo.name as operator_name,
-                    bs.bus_type,
-                    fd.seat_category,
-                    fd.fare,
-                    fd.available_seats,
-                    fd.scraped_at
-                FROM fare_data fd
-                JOIN bus_services bs ON fd.service_id = bs.id
-                JOIN bus_operators bo ON bs.operator_id = bo.id
-                JOIN routes r ON bs.route_id = r.id
-                WHERE r.source = ? AND r.destination = ?
-                AND fd.journey_date >= date('now', '-' || ? || ' days')
-                ORDER BY fd.journey_date DESC, fd.fare ASC
-            ''', (source, destination, days_back))
+        """Get fare history for a route"""
+        try:
+            from datetime import timedelta
+            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
             
-            columns = [desc[0] for desc in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            pipeline = [
+                {
+                    "$lookup": {
+                        "from": "bus_services",
+                        "localField": "service_id",
+                        "foreignField": "_id",
+                        "as": "service"
+                    }
+                },
+                {"$unwind": "$service"},
+                {
+                    "$lookup": {
+                        "from": "routes",
+                        "localField": "service.route_id",
+                        "foreignField": "_id",
+                        "as": "route"
+                    }
+                },
+                {"$unwind": "$route"},
+                {
+                    "$lookup": {
+                        "from": "bus_operators",
+                        "localField": "service.operator_id",
+                        "foreignField": "_id",
+                        "as": "operator"
+                    }
+                },
+                {"$unwind": "$operator"},
+                {
+                    "$match": {
+                        "route.source": source,
+                        "route.destination": destination,
+                        "scraped_at": {"$gte": cutoff_date}
+                    }
+                },
+                {
+                    "$sort": {"journey_date": -1, "fare": 1}
+                },
+                {
+                    "$project": {
+                        "journey_date": 1,
+                        "operator_name": "$operator.name",
+                        "bus_type": "$service.bus_type",
+                        "seat_category": 1,
+                        "fare": 1,
+                        "available_seats": 1,
+                        "scraped_at": 1
+                    }
+                }
+            ]
+            
+            return list(self.db.fare_data.aggregate(pipeline))
+            
+        except Exception as e:
+            print(f"Error getting route fare history: {e}")
+            return []
     
     def get_demand_analysis(self, source: str, destination: str) -> Dict:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        """Get demand analysis for a route"""
+        try:
+            from datetime import timedelta
+            cutoff_date = datetime.utcnow() - timedelta(days=30)
             
-            cursor.execute('''
-                SELECT 
-                    AVG(fd.fare) as avg_fare,
-                    MIN(fd.fare) as min_fare,
-                    MAX(fd.fare) as max_fare,
-                    AVG(fd.available_seats) as avg_available_seats,
-                    COUNT(*) as total_records
-                FROM fare_data fd
-                JOIN bus_services bs ON fd.service_id = bs.id
-                JOIN routes r ON bs.route_id = r.id
-                WHERE r.source = ? AND r.destination = ?
-                AND fd.journey_date >= date('now', '-30 days')
-            ''', (source, destination))
+            pipeline = [
+                {
+                    "$lookup": {
+                        "from": "bus_services",
+                        "localField": "service_id",
+                        "foreignField": "_id",
+                        "as": "service"
+                    }
+                },
+                {"$unwind": "$service"},
+                {
+                    "$lookup": {
+                        "from": "routes",
+                        "localField": "service.route_id",
+                        "foreignField": "_id",
+                        "as": "route"
+                    }
+                },
+                {"$unwind": "$route"},
+                {
+                    "$match": {
+                        "route.source": source,
+                        "route.destination": destination,
+                        "scraped_at": {"$gte": cutoff_date}
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": None,
+                        "avg_fare": {"$avg": "$fare"},
+                        "min_fare": {"$min": "$fare"},
+                        "max_fare": {"$max": "$fare"},
+                        "avg_available_seats": {"$avg": "$available_seats"},
+                        "total_records": {"$sum": 1}
+                    }
+                }
+            ]
             
-            result = cursor.fetchone()
+            result = list(self.db.fare_data.aggregate(pipeline))
             if result:
-                columns = [desc[0] for desc in cursor.description]
-                return dict(zip(columns, result))
+                data = result[0]
+                data.pop("_id", None)
+                return data
+            return {}
+            
+        except Exception as e:
+            print(f"Error getting demand analysis: {e}")
             return {}
     
     def export_data_to_csv(self, output_path: str, source: str = None, destination: str = None):
-        import pandas as pd
-        
-        with self.get_connection() as conn:
-            query = '''
-                SELECT 
-                    r.source,
-                    r.destination,
-                    bo.name as operator_name,
-                    bs.bus_type,
-                    bs.departure_time,
-                    bs.arrival_time,
-                    bs.duration,
-                    fd.journey_date,
-                    fd.seat_category,
-                    fd.fare,
-                    fd.available_seats,
-                    fd.scraped_at
-                FROM fare_data fd
-                JOIN bus_services bs ON fd.service_id = bs.id
-                JOIN bus_operators bo ON bs.operator_id = bo.id
-                JOIN routes r ON bs.route_id = r.id
-            '''
+        """Export data to CSV"""
+        try:
+            import pandas as pd
             
-            params = []
+            match_conditions = {}
             if source and destination:
-                query += " WHERE r.source = ? AND r.destination = ?"
-                params = [source, destination]
+                match_conditions["route.source"] = source
+                match_conditions["route.destination"] = destination
             
-            query += " ORDER BY fd.journey_date DESC, r.source, r.destination"
+            pipeline = [
+                {
+                    "$lookup": {
+                        "from": "bus_services",
+                        "localField": "service_id",
+                        "foreignField": "_id",
+                        "as": "service"
+                    }
+                },
+                {"$unwind": "$service"},
+                {
+                    "$lookup": {
+                        "from": "routes",
+                        "localField": "service.route_id",
+                        "foreignField": "_id",
+                        "as": "route"
+                    }
+                },
+                {"$unwind": "$route"},
+                {
+                    "$lookup": {
+                        "from": "bus_operators",
+                        "localField": "service.operator_id",
+                        "foreignField": "_id",
+                        "as": "operator"
+                    }
+                },
+                {"$unwind": "$operator"},
+                {
+                    "$project": {
+                        "source": "$route.source",
+                        "destination": "$route.destination",
+                        "operator_name": "$operator.name",
+                        "bus_type": "$service.bus_type",
+                        "departure_time": "$service.departure_time",
+                        "arrival_time": "$service.arrival_time",
+                        "duration": "$service.duration",
+                        "journey_date": 1,
+                        "seat_category": 1,
+                        "fare": 1,
+                        "available_seats": 1,
+                        "scraped_at": 1
+                    }
+                },
+                {
+                    "$sort": {"scraped_at": -1, "source": 1, "destination": 1}
+                }
+            ]
             
-            df = pd.read_sql_query(query, conn, params=params)
-            df.to_csv(output_path, index=False)
+            if match_conditions:
+                pipeline.insert(-1, {"$match": match_conditions})
             
-            return len(df)
+            data = list(self.db.fare_data.aggregate(pipeline))
+            
+            if data:
+                df = pd.DataFrame(data)
+                df.to_csv(output_path, index=False)
+                return len(df)
+            else:
+                return 0
+                
+        except Exception as e:
+            print(f"Error exporting data to CSV: {e}")
+            return 0
