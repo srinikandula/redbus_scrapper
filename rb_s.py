@@ -2,6 +2,7 @@ import asyncio
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 import csv
+import argparse
 
 RED_BUS_URL = "https://www.redbus.in/"
 
@@ -9,9 +10,6 @@ RED_BUS_URL = "https://www.redbus.in/"
 # City selection function
 # -----------------------
 async def pick_city(page, label_text: str, city: str):
-    """
-    Pick a city in Redbus reliably by typing and selecting the first suggestion.
-    """
     button = page.locator(f"div[role='button'] .label___d74dcc:text('{label_text}')").first
     await button.click()
 
@@ -29,7 +27,6 @@ async def pick_city(page, label_text: str, city: str):
 # Scrape bus details
 # -----------------------
 async def scrape_buses(page):
-    """Scrapes all bus details from the results page using BeautifulSoup."""
     html = await page.content()
     soup = BeautifulSoup(html, "html.parser")
 
@@ -70,22 +67,17 @@ async def scrape_redbus(source: str, destination: str):
         await pick_city(page, "From", source)
         await pick_city(page, "To", destination) 
 
-        # Click Search button (skip date selection)
         search_btn = page.locator("button", has_text="Search Buses")
         await search_btn.click()
 
-        # Wait for bus list to load
         await page.wait_for_selector("li.tupleWrapper___04f2bd", timeout=20000)
 
-        # Scrape all buses
         buses = await scrape_buses(page)
 
-        # Print top 10 results
         print(f"\nTop 10 buses from {source} to {destination}:\n")
         for b in buses[:10]:
             print(b)
 
-        # Save all results to CSV
         if buses:
             keys = buses[0].keys()
             with open("buses.csv", "w", newline="", encoding="utf-8") as f:
@@ -97,7 +89,12 @@ async def scrape_redbus(source: str, destination: str):
         await browser.close()
 
 # -----------------------
-# Entry point
+# Entry point with CLI flags
 # -----------------------
 if __name__ == "__main__":
-    asyncio.run(scrape_redbus("Bangalore", "Hyderabad"))
+    parser = argparse.ArgumentParser(description="RedBus scraper")
+    parser.add_argument("--from", dest="from_city", required=True, type=str, help="Source city")
+    parser.add_argument("--to", dest="to_city", required=True, type=str, help="Destination city")
+    args = parser.parse_args()
+
+    asyncio.run(scrape_redbus(args.from_city, args.to_city))
