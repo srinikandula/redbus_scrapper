@@ -1,8 +1,6 @@
 import asyncio
-from playwright.async_api import async_playwright
-from bs4 import BeautifulSoup
-import csv
 import argparse
+from playwright.async_api import async_playwright
 
 RED_BUS_URL = "https://www.redbus.in/"
 
@@ -10,49 +8,27 @@ RED_BUS_URL = "https://www.redbus.in/"
 # City selection function
 # -----------------------
 async def pick_city(page, label_text: str, city: str):
+    """
+    Pick a city in Redbus reliably by typing and selecting the first suggestion.
+    """
+    # Click the input field
     button = page.locator(f"div[role='button'] .label___d74dcc:text('{label_text}')").first
     await button.click()
 
+    # Locate input inside popup
     textbox = page.locator("div[role='dialog'] input, div[role='dialog'] [contenteditable='true']").first
     await textbox.wait_for(state="visible", timeout=10000)
 
+    # Clear and type city
     await textbox.fill("")
     await textbox.type(city, delay=60)
-    await page.wait_for_timeout(1000)
 
+    # Wait a short moment for suggestions to populate
+    await page.wait_for_timeout(1000)  # 1 second
+
+    # Click the first suggestion
     option = page.locator("[role='listbox'] [role='option']").first
     await option.click()
-
-# -----------------------
-# Scrape bus details
-# -----------------------
-async def scrape_buses(page):
-    html = await page.content()
-    soup = BeautifulSoup(html, "html.parser")
-
-    buses = []
-    for bus_li in soup.select("li.tupleWrapper___04f2bd"):
-        bus = {}
-        try:
-            bus['name'] = bus_li.select_one(".travelsName___854b5a").text.strip()
-            bus['type'] = bus_li.select_one(".busType___87f844").text.strip()
-            bus['departure'] = bus_li.select_one(".boardingTime___ca56c9").text.strip()
-            bus['arrival'] = bus_li.select_one(".droppingTime___70b12b").text.strip()
-            bus['duration'] = bus_li.select_one(".duration___916eff").text.strip()
-            bus['total_seats'] = bus_li.select_one(".totalSeats___7f6310").text.strip()
-
-            single_seats_tag = bus_li.select_one(".singleSeats___63f11c")
-            bus['single_seats'] = single_seats_tag.text.strip() if single_seats_tag else None
-
-            bus['price'] = bus_li.select_one(".finalFare___4bd28c").text.strip()
-
-            rating_tag = bus_li.select_one(".rating___b0d40f")
-            bus['rating'] = rating_tag.text.strip() if rating_tag else None
-
-            buses.append(bus)
-        except:
-            continue
-    return buses
 
 # -----------------------
 # Main scraper function
@@ -65,36 +41,48 @@ async def scrape_redbus(source: str, destination: str):
 
         # Select source & destination
         await pick_city(page, "From", source)
-        await pick_city(page, "To", destination) 
+        await pick_city(page, "To", destination)
 
+        # Click Search Buses
         search_btn = page.locator("button", has_text="Search Buses")
         await search_btn.click()
 
-        await page.wait_for_selector("li.tupleWrapper___04f2bd", timeout=20000)
+        # Wait for at least one bus row to appear
+        # Wait for the main results container
+        await page.wait_for_selector("div[id='search_results']", timeout=30000)
 
-        buses = await scrape_buses(page)
+        # Locate all bus rows inside that container
+        bus_rows = await page.locator("div[id='search_results'] div[class*='travels']").all()
 
-        print(f"\nTop 10 buses from {source} to {destination}:\n")
-        for b in buses[:10]:
-            print(b)
+        results = []
+        for bus in bus_rows[:10]:
+            try:
+                name = await bus.locator("div[class*='travels']").inner_text()
+                depart = await bus.locator("div[class*='dp-time']").inner_text()
+                arrive = await bus.locator("div[class*='bp-time']").inner_text()
+                price = await bus.locator("div[class*='seat-fare']").inner_text()
+                results.append({
+                    "name": name.strip(),
+                    "depart": depart.strip(),
+                    "arrive": arrive.strip(),
+                    "price": price.strip()
+                })
+            except:
+                continue
 
-        if buses:
-            keys = buses[0].keys()
-            with open("buses.csv", "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=keys)
-                writer.writeheader()
-                writer.writerows(buses)
-            print(f"\nSaved {len(buses)} buses to buses.csv")
+        print(f"\nBuses from {source} to {destination}:\n")
+        for r in results:
+            print(r)
 
         await browser.close()
 
 # -----------------------
-# Entry point with CLI flags
+# Entry point
 # -----------------------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="RedBus scraper")
-    parser.add_argument("--from", dest="from_city", required=True, type=str, help="Source city")
-    parser.add_argument("--to", dest="to_city", required=True, type=str, help="Destination city")
+    parser = argparse.ArgumentParser(description="Redbus Scraper")
+    parser.add_argument("--from", dest="source", required=True, help="Source city")
+    parser.add_argument("--to", dest="destination", required=True, help="Destination city")
     args = parser.parse_args()
 
-    asyncio.run(scrape_redbus(args.from_city, args.to_city))
+    asyncio.run(scrape_redbus(args.source, args.destination))
