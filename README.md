@@ -3,8 +3,6 @@
 A Python utility that uses **browser-use** (LLM-driven browser automation) to scrape bus listings from [redbus.in](https://www.redbus.in), normalize the results, and save them to **MongoDB**.  
 It also writes a JSON file `bus_results.json` with clean data.
 
-> Make sure scraping redbus.in complies with their Terms of Service before running this script.
-
 ---
 
 ## Features
@@ -43,12 +41,12 @@ pip install -r requirements.txt
 Example .env
 
 # MongoDB connection
-
+```bash
 MONGO_URI=mongodb://localhost:27017
 DB_NAME=redbus_db
 COLLECTION_NAME=bus_results
 OPENAI_API_KEY=your_openai_key_here
-
+```
 ## Usage
 
 Run the scraper with:
@@ -58,21 +56,21 @@ python main.py --from Mumbai --to Hyderabad
 
 ```
 
-It will:
+> It will:
 
-Open redbus.in
+> Open redbus.in
 
-Fill From, To, and Date fields.
+> Fill From, To, and Date fields.
 
-Extract the first 10 bus entries.
+> Extract the first 10 bus entries.
 
-Insert results into MongoDB.
+> Insert results into MongoDB.
 
-Write bus_results.json.
+> Write bus_results.json.
 
 ## CLI Parameters
 
-# You can parameterize source, destination, date, and limit using CLI flags (after adding argparse to your script)
+## You can parameterize source, destination, date, and limit using CLI flags (after adding argparse to your script)
 
 ```bash
 python redbus_mongo.py --from Hyderabad --to Chennai --date today --limit 10
