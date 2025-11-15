@@ -1,0 +1,29 @@
+i# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.sqlite3
+*.db
+.env
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+
+# MongoDB dumps/backups
+dump/
+*.bson
+*.metadata.json
