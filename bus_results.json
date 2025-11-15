@@ -1,0 +1,202 @@
+[
+  {
+    "bus_name": "KSM Roadways",
+    "fare": 1099,
+    "rating": 4.7,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bb9"
+  },
+  {
+    "bus_name": "TVK TRAVELS",
+    "fare": 999,
+    "rating": 4.7,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bba"
+  },
+  {
+    "bus_name": "RAJESH TRANSPORTS",
+    "fare": 1295,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bbb"
+  },
+  {
+    "bus_name": "Go Tour Travels and Holidays",
+    "fare": 899,
+    "rating": 4.5,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bbc"
+  },
+  {
+    "bus_name": "RAJESH TRANSPORTS",
+    "fare": 1295,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bbd"
+  },
+  {
+    "bus_name": "Sree Rama Tours & Travels",
+    "fare": 719,
+    "rating": 4.1,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bbe"
+  },
+  {
+    "bus_name": "FlixBus",
+    "fare": 712,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bbf"
+  },
+  {
+    "bus_name": "zingbus plus",
+    "fare": 540,
+    "rating": 4.2,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc0"
+  },
+  {
+    "bus_name": "KSM Roadways",
+    "fare": 999,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc1"
+  },
+  {
+    "bus_name": "zingbus plus",
+    "fare": 699,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc2"
+  },
+  {
+    "bus_name": "V Kaveri Travels",
+    "fare": 719,
+    "rating": 4.4,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc3"
+  },
+  {
+    "bus_name": "November Travels",
+    "fare": 585,
+    "rating": 4.4,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc4"
+  },
+  {
+    "bus_name": "Vikram Travels",
+    "fare": 999,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc5"
+  },
+  {
+    "bus_name": "HASH BUS",
+    "fare": 719,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc6"
+  },
+  {
+    "bus_name": "Intercity travels",
+    "fare": 899,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc7"
+  },
+  {
+    "bus_name": "HASH BUS",
+    "fare": 899,
+    "rating": 4.6,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc8"
+  },
+  {
+    "bus_name": "Pramukh Travels",
+    "fare": 899,
+    "rating": 4.5,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bc9"
+  },
+  {
+    "bus_name": "Go Tour Travels and Holidays",
+    "fare": 999,
+    "rating": 4.4,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bca"
+  },
+  {
+    "bus_name": "Intercity travels",
+    "fare": 999,
+    "rating": 4.5,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bcb"
+  },
+  {
+    "bus_name": "FlixBus",
+    "fare": 712,
+    "rating": 4.4,
+    "scraped_at": "2025-11-15T14:22:40.838131+00:00",
+    "source": "Bangalore",
+    "dest": "Hyderabad",
+    "journey_date": "today",
+    "_id": "69188cb0aa270aebbc0d1bcc"
+  }
+]

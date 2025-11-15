@@ -80,21 +80,26 @@ def parse_date_option(date_arg: str) -> str:
         return date_arg
 
 
-async def run_browser_use(source: str, dest: str, date_arg: str, limit: int = 10):
+async def run_browser_use(source: str, dest: str, date_arg: str):
     llm = ChatOpenAI(model=MODEL)
 
     # craft the task using CLI values
     date_text = parse_date_option(date_arg)
     task = f"""
-    Go to https://www.redbus.in.
-    - In the 'From' input, type exactly: {source} and select the first dropdown suggestion.
-    - In the 'To' input, type exactly: {dest} and select the first dropdown suggestion.
-    - In the date picker (onward date), select {date_text}.
-    - Click the search button to load results.
-    - Wait until the results list is visible and extract the first {limit} buses with fields:
-      bus_name, fare, rating.
-    - Return ONLY a JSON array (no commentary). Each element must be an object with keys:
-      bus_name, fare, rating.
+    Go to https://www.redbus.in (UI matches redbus.com).
+    - Step 1: Click the FROM input (placeholder 'FROM', id `src`), clear it, then type exactly: {source}.
+      Wait for the auto-complete list, select the suggestion whose label matches {source} (case-insensitive), then read the input value and ensure it equals {source}. 
+      If it does not, reopen the autocomplete list and reselect until it matches. 
+    - Click on the selected suggestion and wait for the input value to update to {source}. 
+    - Please make sure the input value is exactly {source} before proceeding else restart the process from step 1.
+    - Step 2: Repeat the above steps for the TO input (placeholder 'TO', id `dest`) with city: {dest}, again confirming the input value equals {dest} after selection. Click on the selected suggestion.
+    - Step 3: Open the onward date picker and select {date_text}. Confirm the date badge reflects the correct text before continuing.
+    - Step 4: Click the search button to load results and wait for the bus tiles/list to finish rendering.
+    - Step 5: If there is a popup on the page with some text like "Select your preferred boarding point, click on the "Proceed/Continue" button to close the popup.
+    - Step 6: Once results load, move to the right-hand results pane and scroll down in roughly two-screen/page increments with one second delay 
+      between each scroll, repeating until the "End of list" text is visible so every bus card loads before extraction.
+    - Step 7: Extract every bus in the list with fields: bus_name, fare, rating.
+    - Step 8: Return ONLY a JSON array (no commentary). Each element must be an object with keys: bus_name, fare, rating.
     """
 
     print("Running agent with task:")
@@ -147,6 +152,9 @@ async def run_browser_use(source: str, dest: str, date_arg: str, limit: int = 10
             continue
         b["rating"] = safe_parse_rating(b.get("rating"))
         b["scraped_at"] = now_dt
+        b["source"] = source
+        b["dest"] = dest
+        b["journey_date"] = date_text
 
     inserted_ids = None
     if buses:
@@ -192,12 +200,10 @@ def main():
         default="today",
         help="Date to select: 'today' (default), 'tomorrow', or YYYY-MM-DD",
     )
-    parser.add_argument("--limit", dest="limit", type=int, default=10, help="Number of buses to extract")
     args = parser.parse_args()
 
-    asyncio.run(run_browser_use(args.source, args.dest, args.date, args.limit))
+    asyncio.run(run_browser_use(args.source, args.dest, args.date))
 
 
 if __name__ == "__main__":
     main()
-

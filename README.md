@@ -8,7 +8,7 @@ It also writes a JSON file `bus_results.json` with clean data.
 ## Features
 
 - Automates RedBus search (source, destination, date).
-- Extracts the first `N` bus entries (default: 10) with fields:
+- Extracts every visible bus entry with fields:
   - `bus_name`
   - `fare`
   - `rating`
@@ -62,7 +62,7 @@ python main.py --from Mumbai --to Hyderabad
 
 > Fill From, To, and Date fields.
 
-> Extract the first 10 bus entries.
+> Extract all bus entries after the page finishes loading.
 
 > Insert results into MongoDB.
 
@@ -70,10 +70,10 @@ python main.py --from Mumbai --to Hyderabad
 
 ## CLI Parameters
 
-## You can parameterize source, destination, date, and limit using CLI flags (after adding argparse to your script)
+## You can parameterize source, destination, and date using CLI flags
 
 ```bash
-python redbus_mongo.py --from Hyderabad --to Chennai --date today --limit 10
+python redbus_mongo.py --from Hyderabad --to Chennai --date today
 ```
 
 - --from / -s → Source city (default: Hyderabad)
@@ -81,8 +81,6 @@ python redbus_mongo.py --from Hyderabad --to Chennai --date today --limit 10
 - --to / -d → Destination city (default: Chennai)
 
 - --date / -D → Journey date (YYYY-MM-DD or today / tomorrow)
-
-- --limit / -n → Number of buses to extract (default: 10)
 
 ## Example Output (bus_results.json)
 
